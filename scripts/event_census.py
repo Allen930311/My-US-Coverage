@@ -119,15 +119,28 @@ def daterange(start: date, end: date):
         day += timedelta(days=1)
 
 
+def validate_window(since: date, through: date, today: date) -> None:
+    if through >= today:
+        raise ValueError("daily master-index census may only cover completed UTC dates; current-day verification requires SEC submissions")
+    if since > through:
+        raise ValueError("--since must be on or before --through")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Read-only incremental SEC event census for My-US-Coverage")
     parser.add_argument("--since", help="YYYY-MM-DD. Default: two calendar days ago UTC.")
+    parser.add_argument("--through", help="YYYY-MM-DD. Default: previous UTC date; current day is rejected.")
     parser.add_argument("--scope", choices=["covered", "universe"], default="covered")
     parser.add_argument("--output", help="Optional JSON output path.")
     args = parser.parse_args()
 
     now = datetime.now(timezone.utc)
-    since = date.fromisoformat(args.since) if args.since else (now.date() - timedelta(days=2))
+    through = date.fromisoformat(args.through) if args.through else (now.date() - timedelta(days=1))
+    since = date.fromisoformat(args.since) if args.since else (through - timedelta(days=1))
+    try:
+        validate_window(since, through, now.date())
+    except ValueError as exc:
+        parser.error(str(exc))
     registry = load_registry()
     src = source(registry, "sec_daily_master_index")
 
@@ -143,7 +156,7 @@ def main() -> int:
         errors.append({"source_id": "sec_company_tickers", "error": str(exc)})
 
     covered = covered_tickers()
-    for day in daterange(since, now.date()):
+    for day in daterange(since, through):
         url = daily_index_url(src["url_template"], day)
         try:
             text = fetch_text(url)
@@ -190,6 +203,7 @@ def main() -> int:
         "market": "US",
         "generated_at": now.isoformat(),
         "since": since.isoformat(),
+        "through": through.isoformat(),
         "scope": args.scope,
         "complete": not errors,
         "sources_checked": ["sec_company_tickers", "sec_daily_master_index"] if not errors else ["sec_daily_master_index"],

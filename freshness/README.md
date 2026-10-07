@@ -17,14 +17,16 @@ python scripts/freshness.py
 python scripts/freshness.py Pilot_Reports/Technology/AAPL_Apple.md --claim supply_chain_claim
 ```
 
-Discover covered tickers affected by recent SEC filings:
+Discover covered tickers affected by completed-day SEC filings:
 
 ```bash
-python scripts/event_census.py --since 2026-10-01
-python scripts/event_census.py --since 2026-10-01 --scope universe --output /tmp/us-census.json
+python scripts/event_census.py --since 2026-10-01 --through 2026-10-06
+python scripts/event_census.py --since 2026-10-01 --through 2026-10-06 --scope universe --output /tmp/us-census.json
 ```
 
-The census uses SEC daily master indexes plus the SEC CIK/ticker mapping, so it does not make thousands of per-company API calls. Missing weekend/holiday daily indexes are recorded separately from real source failures.
+The census uses SEC daily master indexes plus the SEC CIK/ticker mapping, so it does not make thousands of per-company API calls. It is intentionally a completed-day census: `--through` defaults to the previous UTC date, and the current UTC date is rejected because the daily index is not a real-time completeness source. Current-day publication verification must use SEC submissions.
+
+Missing weekend/holiday daily indexes are recorded separately from real source failures.
 
 The census is read-only and fail-closed. `complete=false` means a required source failed and a zero-event result must not be interpreted as "nothing changed."
 

@@ -33,6 +33,12 @@ CIK|Company Name|Form Type|Date Filed|Filename
             "https://x/2026/QTR4/master.20261007.idx",
         )
 
+    def test_current_day_is_rejected(self):
+        d = __import__("datetime").date
+        with self.assertRaises(ValueError):
+            event_census.validate_window(d(2026, 10, 6), d(2026, 10, 7), d(2026, 10, 7))
+        event_census.validate_window(d(2026, 10, 5), d(2026, 10, 6), d(2026, 10, 7))
+
     def test_timestamp_classification(self):
         rule = {"max_age_days": 2}
         now = datetime(2026, 10, 7, 12, tzinfo=timezone.utc)
