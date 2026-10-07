@@ -1,0 +1,29 @@
+{
+  "schema_version": "freshness-contract-v1",
+  "status_semantics": {
+    "FRESH": "Observed from an allowed source within the configured freshness window.",
+    "STALE": "Observed, but older than the configured freshness window.",
+    "UNKNOWN": "No trustworthy observation or verification timestamp is available.",
+    "BLOCKED": "Inconsistent/future-dated/invalid evidence; publication must stop."
+  },
+  "domains": {
+    "listing_universe": {"max_age_hours": 24, "publication_required": true},
+    "market_snapshot": {"max_age_hours": 36, "publication_required": true},
+    "valuation": {"max_age_hours": 36, "publication_required": false},
+    "material_events": {"max_age_hours": 24, "publication_required": true},
+    "financials": {"max_age_days": 140, "event_latest_required": true, "publication_required": true},
+    "monthly_revenue": {"max_age_days": 45, "publication_required": false},
+    "company_profile": {"max_age_days": 90, "publication_required": false},
+    "supply_chain": {"max_age_days": 90, "publication_required": false}
+  },
+  "publication_gate": {
+    "always_required": ["listing_universe", "market_snapshot", "material_events", "financials"],
+    "claim_scoped": {
+      "valuation_claim": ["valuation"],
+      "monthly_revenue_claim": ["monthly_revenue"],
+      "company_profile_claim": ["company_profile"],
+      "supply_chain_claim": ["supply_chain"]
+    },
+    "allowed_statuses": ["FRESH"]
+  }
+}
