@@ -39,6 +39,11 @@ CIK|Company Name|Form Type|Date Filed|Filename
             event_census.validate_window(d(2026, 10, 6), d(2026, 10, 7), d(2026, 10, 7))
         event_census.validate_window(d(2026, 10, 5), d(2026, 10, 6), d(2026, 10, 7))
 
+    def test_missing_index_policy(self):
+        d = __import__("datetime").date
+        self.assertTrue(event_census.allow_missing_daily_index(d(2026, 10, 4)))   # Sunday
+        self.assertFalse(event_census.allow_missing_daily_index(d(2026, 10, 5)))  # Monday
+
     def test_timestamp_classification(self):
         rule = {"max_age_days": 2}
         now = datetime(2026, 10, 7, 12, tzinfo=timezone.utc)

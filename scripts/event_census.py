@@ -53,6 +53,15 @@ def daily_index_url(template: str, day: date) -> str:
     return template.format(year=day.year, quarter=quarter(day.month), yyyymmdd=day.strftime("%Y%m%d"))
 
 
+def allow_missing_daily_index(day: date) -> bool:
+    """Only an ordinary weekend 404 is safe to treat as an expected no-index day.
+
+    Weekday 404s (including holidays) stay fail-closed until an exchange/SEC
+    calendar adapter explicitly proves the date was a non-filing day.
+    """
+    return day.weekday() >= 5
+
+
 def cik_to_tickers(registry: dict[str, Any]) -> dict[str, set[str]]:
     src = source(registry, "sec_company_tickers")
     payload = fetch_json(src["url"])
@@ -162,8 +171,14 @@ def main() -> int:
             text = fetch_text(url)
             checked_urls.append(url)
         except urllib.error.HTTPError as exc:
-            if exc.code == 404:
+            if exc.code == 404 and allow_missing_daily_index(day):
                 skipped_missing_indexes.append(day.isoformat())
+                continue
+            if exc.code == 404:
+                errors.append({
+                    "source_id": src["id"],
+                    "error": f"{day.isoformat()}: weekday daily index missing (HTTP 404); completeness unknown",
+                })
                 continue
             errors.append({"source_id": src["id"], "error": f"{day.isoformat()}: HTTP {exc.code}"})
             continue
@@ -208,7 +223,7 @@ def main() -> int:
         "complete": not errors,
         "sources_checked": ["sec_company_tickers", "sec_daily_master_index"] if not errors else ["sec_daily_master_index"],
         "checked_index_count": len(checked_urls),
-        "missing_index_dates": skipped_missing_indexes,
+        "missing_weekend_index_dates": skipped_missing_indexes,
         "source_errors": errors,
         "affected_tickers": affected,
         "event_count": len(events),
